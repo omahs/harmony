@@ -254,6 +254,7 @@ func applyRootFlags(cmd *cobra.Command, config *harmonyconfig.HarmonyConfig) {
 	applyPrometheusFlags(cmd, config)
 	applySyncFlags(cmd, config)
 	applyShardDataFlags(cmd, config)
+	applyGPOFlags(cmd, config)
 }
 
 func setupNodeLog(config harmonyconfig.HarmonyConfig) {
@@ -267,7 +268,7 @@ func setupNodeLog(config harmonyconfig.HarmonyConfig) {
 		utils.SetLogContext(ip, strconv.Itoa(port))
 	}
 
-	if config.Log.Console != true {
+	if !config.Log.Console {
 		utils.AddLogFile(logPath, config.Log.RotateSize, config.Log.RotateCount, config.Log.RotateMaxAge)
 	}
 }
@@ -726,11 +727,12 @@ func setupConsensusAndNode(hc harmonyconfig.HarmonyConfig, nodeConfig *nodeconfi
 
 	// We are not beacon chain, make sure beacon already initialized.
 	if nodeConfig.ShardID != shard.BeaconChainShardID {
-		_, err = collection.ShardChain(shard.BeaconChainShardID, core.Options{EpochChain: true})
+		beacon, err := collection.ShardChain(shard.BeaconChainShardID, core.Options{EpochChain: true})
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Error :%v \n", err)
 			os.Exit(1)
 		}
+		registry.SetBeaconchain(beacon)
 	}
 
 	blockchain, err = collection.ShardChain(nodeConfig.ShardID)
@@ -738,11 +740,20 @@ func setupConsensusAndNode(hc harmonyconfig.HarmonyConfig, nodeConfig *nodeconfi
 		_, _ = fmt.Fprintf(os.Stderr, "Error :%v \n", err)
 		os.Exit(1)
 	}
+	registry.SetBlockchain(blockchain)
+	registry.SetWebHooks(nodeConfig.WebHooks.Hooks)
+	if registry.GetBeaconchain() == nil {
+		registry.SetBeaconchain(registry.GetBlockchain())
+	}
+
+	cxPool := core.NewCxPool(core.CxPoolSize)
+	registry.SetCxPool(cxPool)
 
 	// Consensus object.
 	decider := quorum.NewDecider(quorum.SuperMajorityVote, nodeConfig.ShardID)
+	registry.SetIsBackup(isBackup(hc))
 	currentConsensus, err := consensus.New(
-		myHost, nodeConfig.ShardID, nodeConfig.ConsensusPriKey, registry.SetBlockchain(blockchain), decider, minPeers, aggregateSig)
+		myHost, nodeConfig.ShardID, nodeConfig.ConsensusPriKey, registry, decider, minPeers, aggregateSig)
 
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error :%v \n", err)
@@ -778,7 +789,7 @@ func setupConsensusAndNode(hc harmonyconfig.HarmonyConfig, nodeConfig *nodeconfi
 	)
 
 	nodeconfig.GetDefaultConfig().DBDir = nodeConfig.DBDir
-	currentConsensus.SetIsBackup(processNodeType(hc, currentNode))
+	processNodeType(hc, currentNode.NodeConfig)
 	currentNode.NodeConfig.SetShardGroupID(nodeconfig.NewGroupIDByShardID(nodeconfig.ShardID(nodeConfig.ShardID)))
 	currentNode.NodeConfig.SetClientGroupID(nodeconfig.NewClientGroupIDByShardID(shard.BeaconChainShardID))
 	currentNode.NodeConfig.ConsensusPriKey = nodeConfig.ConsensusPriKey
@@ -798,9 +809,6 @@ func setupConsensusAndNode(hc harmonyconfig.HarmonyConfig, nodeConfig *nodeconfi
 		Uint64("viewID", viewID).
 		Msg("Init Blockchain")
 
-	// Assign closure functions to the consensus object
-	currentConsensus.SetBlockVerifier(
-		node.VerifyNewBlock(currentNode.NodeConfig, currentNode.Blockchain(), currentNode.Beaconchain()))
 	currentConsensus.PostConsensusJob = currentNode.PostConsensusProcessing
 	// update consensus information based on the blockchain
 	currentConsensus.SetMode(currentConsensus.UpdateConsensusInformation())
@@ -830,16 +838,23 @@ func setupTiKV(hc harmonyconfig.HarmonyConfig) shardchain.DBFactory {
 	return factory
 }
 
-func processNodeType(hc harmonyconfig.HarmonyConfig, currentNode *node.Node) (isBackup bool) {
+func processNodeType(hc harmonyconfig.HarmonyConfig, nodeConfig *nodeconfig.ConfigType) {
 	switch hc.General.NodeType {
 	case nodeTypeExplorer:
 		nodeconfig.SetDefaultRole(nodeconfig.ExplorerNode)
-		currentNode.NodeConfig.SetRole(nodeconfig.ExplorerNode)
+		nodeConfig.SetRole(nodeconfig.ExplorerNode)
 
 	case nodeTypeValidator:
 		nodeconfig.SetDefaultRole(nodeconfig.Validator)
-		currentNode.NodeConfig.SetRole(nodeconfig.Validator)
+		nodeConfig.SetRole(nodeconfig.Validator)
+	}
+}
 
+func isBackup(hc harmonyconfig.HarmonyConfig) (isBackup bool) {
+	switch hc.General.NodeType {
+	case nodeTypeExplorer:
+
+	case nodeTypeValidator:
 		return hc.General.IsBackup
 	}
 	return false
@@ -943,9 +958,8 @@ func setupStagedSyncService(node *node.Node, host p2p.Host, hc harmonyconfig.Har
 			InsertHook: node.BeaconSyncHook,
 		}
 	}
-
 	//Setup stream sync service
-	s := stagedstreamsync.NewService(host, blockchains, sConfig)
+	s := stagedstreamsync.NewService(host, blockchains, sConfig, hc.General.DataDir)
 
 	node.RegisterService(service.StagedStreamSync, s)
 

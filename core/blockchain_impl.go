@@ -137,7 +137,7 @@ type CacheConfig struct {
 	Preimages         bool          // Whether to store preimage of trie key to the disk
 	SnapshotLimit     int           // Memory allowance (MB) to use for caching snapshot entries in memory
 	SnapshotNoBuild   bool          // Whether the background generation is allowed
-	SnapshotWait      bool          // Wait for snapshot construction on startup. TODO(karalabe): This is a dirty hack for testing, nuke it}
+	SnapshotWait      bool          // Wait for snapshot construction on startup. TODO(karalabe): This is a dirty hack for testing, nuke it
 }
 
 // defaultCacheConfig are the default caching values if none are specified by the
@@ -2629,10 +2629,10 @@ func (bc *BlockChainImpl) ReadCXReceipts(shardID uint32, blockNum uint64, blockH
 	return cxs, nil
 }
 
-func (bc *BlockChainImpl) CXMerkleProof(toShardID uint32, block *types.Block) (*types.CXMerkleProof, error) {
-	proof := &types.CXMerkleProof{BlockNum: block.Number(), BlockHash: block.Hash(), ShardID: block.ShardID(), CXReceiptHash: block.Header().OutgoingReceiptHash(), CXShardHashes: []common.Hash{}, ShardIDs: []uint32{}}
+func (bc *BlockChainImpl) CXMerkleProof(toShardID uint32, block *block.Header) (*types.CXMerkleProof, error) {
+	proof := &types.CXMerkleProof{BlockNum: block.Number(), BlockHash: block.Hash(), ShardID: block.ShardID(), CXReceiptHash: block.OutgoingReceiptHash(), CXShardHashes: []common.Hash{}, ShardIDs: []uint32{}}
 
-	epoch := block.Header().Epoch()
+	epoch := block.Epoch()
 	shardingConfig := shard.Schedule.InstanceForEpoch(epoch)
 	shardNum := int(shardingConfig.NumShards())
 
@@ -2744,8 +2744,8 @@ func (bc *BlockChainImpl) ReadValidatorStats(
 	return rawdb.ReadValidatorStats(bc.db, addr)
 }
 
-func (bc *BlockChainImpl) UpdateValidatorVotingPower(
-	batch rawdb.DatabaseWriter,
+func UpdateValidatorVotingPower(
+	bc BlockChain,
 	block *types.Block,
 	newEpochSuperCommittee, currentEpochSuperCommittee *shard.State,
 	state *state.DB,
@@ -2771,7 +2771,7 @@ func (bc *BlockChainImpl) UpdateValidatorVotingPower(
 			// 	bc.db, currentValidator, currentEpochSuperCommittee.Epoch,
 			// )
 			// rawdb.DeleteValidatorStats(bc.db, currentValidator)
-			stats, err := rawdb.ReadValidatorStats(bc.db, currentValidator)
+			stats, err := rawdb.ReadValidatorStats(bc.ChainDb(), currentValidator)
 			if err != nil {
 				stats = staking.NewEmptyStats()
 			}
@@ -2821,7 +2821,7 @@ func (bc *BlockChainImpl) UpdateValidatorVotingPower(
 
 	networkWide := votepower.AggregateRosters(rosters)
 	for key, value := range networkWide {
-		stats, err := rawdb.ReadValidatorStats(bc.db, key)
+		stats, err := rawdb.ReadValidatorStats(bc.ChainDb(), key)
 		if err != nil {
 			stats = staking.NewEmptyStats()
 		}
