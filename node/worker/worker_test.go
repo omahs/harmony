@@ -46,7 +46,7 @@ func TestNewWorker(t *testing.T) {
 	cacheConfig := &core.CacheConfig{SnapshotLimit: 0}
 	chain, err := core.NewBlockChain(database, nil, &core.BlockChainImpl{}, cacheConfig, gspec.Config, engine, vm.Config{})
 
-  if err != nil {
+	if err != nil {
 		t.Error(err)
 	}
 	// Create a new worker
