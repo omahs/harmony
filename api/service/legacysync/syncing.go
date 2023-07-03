@@ -903,7 +903,7 @@ func (ss *StateSync) UpdateBlockAndStatus(block *types.Block, bc core.BlockChain
 		}
 	}
 
-	_, err := bc.InsertChain([]*types.Block{block}, false /* verifyHeaders */)
+	_, err := bc.InsertChain([]*types.Block{block}, false /* verifyHeaders */, true)
 	if err != nil {
 		utils.Logger().Error().
 			Err(err).
@@ -1148,7 +1148,7 @@ func (ss *StateSync) addConsensusLastMile(bc core.BlockChain, consensus *consens
 			if block == nil {
 				break
 			}
-			if _, err := bc.InsertChain(types.Blocks{block}, true); err != nil {
+			if _, err := bc.InsertChain(types.Blocks{block}, true, true); err != nil {
 				return errors.Wrap(err, "failed to InsertChain")
 			}
 		}
