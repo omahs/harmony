@@ -129,7 +129,7 @@ func (sr *StageEpoch) doShortRangeSyncForEpochSync(ctx context.Context, s *Stage
 		return 0, nil
 	}
 
-	n, err := s.state.bc.InsertChain(blocks, true)
+	n, err := s.state.bc.InsertChain(blocks, true, true)
 	numBlocksInsertedShortRangeHistogramVec.With(s.state.promLabels()).Observe(float64(n))
 	if err != nil {
 		utils.Logger().Info().Err(err).Int("blocks inserted", n).Msg("Insert block failed")
