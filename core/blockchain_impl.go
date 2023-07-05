@@ -1337,8 +1337,6 @@ func SetReceiptsData(config *params.ChainConfig, block *types.Block, receipts ty
 
 // InsertReceiptChain attempts to complete an already existing header chain with
 // transaction and receipt data.
-// Deprecated: no usages of this function found.
-// TODO: should be removed
 func (bc *BlockChainImpl) InsertReceiptChain(blockChain types.Blocks, receiptChain []types.Receipts) (int, error) {
 	// Do a sanity check that the provided chain is actually ordered and linked
 	for i := 1; i < len(blockChain); i++ {
