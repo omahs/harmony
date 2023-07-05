@@ -28,7 +28,7 @@ func verifyAndInsertBlocks(bc blockChain, blocks types.Blocks, blockExecution bo
 	return len(blocks), nil
 }
 
-func verifyAndInsertBlock(bc blockChain, block *types.Block, blockExecution bool, nextBlocks ...*types.Block) error {
+func verifyBlock(bc blockChain, block *types.Block, nextBlocks ...*types.Block) error {
 	var (
 		sigBytes bls.SerializedSignature
 		bitmap   []byte
@@ -53,6 +53,15 @@ func verifyAndInsertBlock(bc blockChain, block *types.Block, blockExecution bool
 	if err := bc.Engine().VerifyHeader(bc, block.Header(), true); err != nil {
 		return errors.Wrap(err, "[VerifyHeader]")
 	}
+	return nil
+}
+
+func verifyAndInsertBlock(bc blockChain, block *types.Block, blockExecution bool, nextBlocks ...*types.Block) error {
+	//verify block
+	if err := verifyBlock(bc, block, nextBlocks...); err != nil {
+		return err
+	}
+	// insert block
 	if _, err := bc.InsertChain(types.Blocks{block}, false, blockExecution); err != nil {
 		return errors.Wrap(err, "[InsertChain]")
 	}
