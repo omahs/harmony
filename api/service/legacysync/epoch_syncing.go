@@ -199,7 +199,7 @@ func processWithPayload(payload [][]byte, bc core.BlockChain) error {
 		decoded = append(decoded, block)
 	}
 
-	_, err := bc.InsertChain(decoded, true, true)
+	_, err := bc.InsertChain(decoded, true)
 	return err
 }
 
