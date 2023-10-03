@@ -177,7 +177,7 @@ func (stg *StageStates) Exec(firstCycle bool, invalidBlockRevert bool, s *StageS
 		// insert downloaded block into chain
 		headBeforeNewBlocks := stg.configs.bc.CurrentBlock().NumberU64()
 		headHashBeforeNewBlocks := stg.configs.bc.CurrentBlock().Hash()
-		_, err = stg.configs.bc.InsertChain(newBlocks, false, true) //TODO: verifyHeaders can be done here
+		_, err = stg.configs.bc.InsertChain(newBlocks, false) //TODO: verifyHeaders can be done here
 		if err != nil {
 			// TODO: handle chain rollback because of bad block
 			utils.Logger().Error().

@@ -93,7 +93,7 @@ func (consensus *Consensus) AddConsensusLastMile() error {
 			if block == nil {
 				break
 			}
-			if _, err := consensus.Blockchain().InsertChain(types.Blocks{block}, true, true); err != nil {
+			if _, err := consensus.Blockchain().InsertChain(types.Blocks{block}, true); err != nil {
 				return errors.Wrap(err, "failed to InsertChain")
 			}
 		}
