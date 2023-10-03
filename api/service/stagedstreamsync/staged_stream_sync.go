@@ -714,7 +714,7 @@ func (ss *StagedStreamSync) UpdateBlockAndStatus(block *types.Block, bc core.Blo
 		}
 	}
 
-	_, err := bc.InsertChain([]*types.Block{block}, false  /* verifyHeaders */, true)
+	_, err := bc.InsertChain([]*types.Block{block}, false /* verifyHeaders */, true)
 	if err != nil {
 		utils.Logger().Error().
 			Err(err).
