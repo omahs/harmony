@@ -742,6 +742,11 @@ func (bc *BlockChainImpl) CurrentFastBlock() *types.Block {
 	return bc.currentFastBlock.Load().(*types.Block)
 }
 
+// Validator returns the current validator.
+func (bc *BlockChainImpl) Validator() Validator {
+	return bc.validator
+}
+
 func (bc *BlockChainImpl) Processor() Processor {
 	bc.procmu.RLock()
 	defer bc.procmu.RUnlock()
