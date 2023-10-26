@@ -1666,7 +1666,7 @@ func (bc *BlockChainImpl) InsertChain(chain types.Blocks, verifyHeaders bool) (i
 	}
 
 	prevHash := bc.CurrentBlock().Hash()
-	n, events, logs, err := bc.insertChain(chain, verifyHeaders, blockExecution)
+	n, events, logs, err := bc.insertChain(chain, verifyHeaders)
 	bc.PostChainEvents(events, logs)
 	if err == nil {
 		if prevHash == bc.CurrentBlock().Hash() {
